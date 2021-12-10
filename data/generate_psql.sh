@@ -2,6 +2,7 @@
 sudo -u postgres sh -c "echo \"create user $USER; create database ufos; grant all privileges on database ufos to $USER;\" | psql"
 
 # Create table
+echo "drop table if exists example" | psql -U $USER -d ufos
 echo "create table example (id serial primary key, integer int, logical boolean, numeric real);" | psql -U $USER -d ufos
 
 # Populate table
