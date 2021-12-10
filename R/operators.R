@@ -190,7 +190,10 @@ ufo_apply <- function(FUN, ..., MoreArgs = NULL, USE.NAMES = TRUE, chunk_size=10
   }
 
   # TODO copy attributes
-  return(.add_class(result, "ufo", .check_add_class()))
+  if(.check_add_class()) {
+    class(result) <- c("ufo", attr(result, "class"))
+  }
+  return(result)
 }
 
 .ufo_unary <- function(operation, result_inference, x, min_load_count=0, chunk_size=100000) {
@@ -207,7 +210,10 @@ ufo_apply <- function(FUN, ..., MoreArgs = NULL, USE.NAMES = TRUE, chunk_size=10
   }
 
   # TODO copy attributes
-  return(.add_class(result, "ufo", .check_add_class()))
+  if(.check_add_class()) {
+    class(result) <- c("ufo", attr(result, "class"))
+  }
+  return(result)
 }
 
 #-----------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 #!/bin/bash
-[ ! -e "gen" ] && (gcc -o gen gen.c)
+[ ! -e "$(dirname $0)/gen" ] && (gcc -o "$(dirname $0)/gen" "$(dirname $0)/gen.c")
 
 echo "provided: $0 $@"
 
