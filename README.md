@@ -66,19 +66,6 @@ for privileged users. To allow unprivileged users to call `userfaultfd`:
 sysctl -w vm.unprivileged_userfaultfd=1
 ```
 
-The package requires the `viewports` package which can be installed from GitHub:
-
-```bash
-git clone https://github.com/ufo-org/viewports.git
-R CMD INSTALL viewports
-```
-
-Allternatively, from R:
-
-```R
-devtools::install_github("ufo-org/viewports")
-```
-
 ## Building
 
 Before building, retrievew the code of a submodule:
