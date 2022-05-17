@@ -1,4 +1,4 @@
-#include "../include/ufo_r/src/ufos.h"
+#include "../include/ufos.h"
 #include "ufo_vectors.h"
 #include "ufo_empty.h"
 #include "ufo_csv.h"
@@ -7,18 +7,12 @@
 #include "ufo_bz2.h"
 #include "ufo_write_protect.h"
 #include "ufo_bind.h"
-#include "ufo_operators.h"
 
 #include <R_ext/Rdynload.h>
 #include <R_ext/Visibility.h>
 
 // List of functions provided by the package.
 static const R_CallMethodDef CallEntries[] = {
-
-    // Chunking.
-    {"get_chunk",				(DL_FUNC) &ufo_get_chunk,					4},
-	//{"calculate_chunk_indices", (DL_FUNC) &ufo_calculate_chunk_indices,     4},
-	//{"calculate_chunk_indices", (DL_FUNC) &ufo_calculate_chunk_indices,     4},
 
     // Constructors for vectors that partially materialize on-demand from
     // binary files.
@@ -75,22 +69,8 @@ static const R_CallMethodDef CallEntries[] = {
     // Turn on debug mode.
     {"vectors_set_debug_mode",  (DL_FUNC) &ufo_vectors_set_debug_mode,      1},
 
-	// Artihmetic operators result constructors.
-	{"fit_result", 				(DL_FUNC) &ufo_fit_result,					3},
-	{"div_result",				(DL_FUNC) &ufo_div_result,					3},
-	{"mod_result",				(DL_FUNC) &ufo_mod_result,					3},
-	{"rel_result",				(DL_FUNC) &ufo_rel_result,					3},
-	{"log_result",				(DL_FUNC) &ufo_log_result,					3},
-	{"neg_result",				(DL_FUNC) &ufo_neg_result,					2},
-
-	// Subsetting operators.
-	{"subset",					(DL_FUNC) &ufo_subset,						3},
-	{"subset_assign",			(DL_FUNC) &ufo_subset_assign,				4},
-
-    {"subscript",				(DL_FUNC) &ufo_subscript,					3},
-
     // Terminates the function list. Necessary.
-    {NULL,							NULL,										0}
+    {NULL,						NULL,										0}
 };
 
 // Initializes the package and registers the routines with the Rdynload
@@ -100,5 +80,3 @@ void attribute_visible R_init_ufovectors(DllInfo *dll) {
     R_useDynamicSymbols(dll, FALSE);
     R_forceSymbols(dll, TRUE); // causes failure to lookup the ufo_get_chunk symbol
 }
-
-

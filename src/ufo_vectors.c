@@ -7,8 +7,8 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "../include/ufo_r/src/ufos.h"
-#include "../include/ufo_r/src/ufos_writeback.h"
+#include "../include/ufos.h"
+#include "../include/ufos_writeback.h"
 #include "ufo_vectors.h"
 #include "ufo_metadata.h"
 #include "helpers.h"

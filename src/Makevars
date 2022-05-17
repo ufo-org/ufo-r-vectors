@@ -23,8 +23,7 @@ SOURCES_C = init.c  \
             ufo_csv.c csv/string_vector.c csv/string_set.c csv/token.c csv/tokenizer.c csv/reader.c  \
             ufo_psql.c psql/psql.c \
             ufo_vectors.c bin/io.c \
-            ufo_operators.c ufo_coerce.c \
             evil/bad_strings.c \
-            rrr.c helpers.c debug.c rash.c 
+            rrr.c helpers.c debug.c
 
 OBJECTS = $(SOURCES_C:.c=.o)

@@ -119,8 +119,8 @@ To prevent this, they provide a set of operators that return file-backed UFOs.
 These operator implementations are a separate, optional feature of UFO vectors, so they need to be turned on before loading the package:
 
 ```{r}
-options(ufovectors.add_class = TRUE)
-library(ufovectors)
+options(ufos.add_class = TRUE)
+library(ufooperators)
 iv <- ufo_integer_bin("example_int.bin")
 ```
 
@@ -163,7 +163,7 @@ v <- iv | TRUE
 If adding a class to the UFO breaks the transparency too much, UFOs can also be made to override default operators instead of being plugged into the S3 system. 
 
 ```{r}
-options(ufovectors.overload_operators = TRUE)
+options(ufos.overload_operators = TRUE)
 ```
 
 While we attempt to mitigate any potential problems, this approach is more dangerous than the S3 approach, since the override will apply to all operators and may lead to unexpected problems down the line for other objects.

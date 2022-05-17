@@ -1,0 +1,45 @@
+MkInclude = $(R_HOME)/etc${R_ARCH}/Makeconf
+
+# You can set UFO_DEBUG=1 or UFO_DEBUG=0 in the environment to compile with or
+# without debug symbols (this affects both the C and the Rust code).
+
+UFO_C_PATH=ufo_c
+
+# cargo will generate the output binaries for ufo-c either in a debug
+# subdirectory or a release subdirectory. We remember which.
+ifeq (${UFO_DEBUG}, 1)
+	CARGOFLAGS=build
+	UFO_C_LIB_PATH="$(UFO_C_PATH)/target/debug"
+else
+	CARGOFLAGS=build --release
+	UFO_C_LIB_PATH="$(UFO_C_PATH)/target/release"
+endif
+
+PKG_LIBS = -Wl,--no-as-needed -lpthread -lrt -ldl -lm -lstdc++ $(UFO_C_LIB_PATH)/libufo_c.a
+ifeq (${UFO_DEBUG}, 1)
+	PKG_CFLAGS = -DMAKE_SURE -Og -ggdb -fPIC -Wall -Werror -DNDEBUG -I$(UFO_C_PATH)/target/
+else
+	PKG_CFLAGS = -DMAKE_SURE -O2       -fpic -Wall -Werror -DNDEBUG -I$(UFO_C_PATH)/target/
+endif
+
+SOURCES_C = init.c ufos.c R_ext.c bad_strings.c
+
+OBJECTS = $(SOURCES_C:.c=.o)
+
+.PHONY: all ufo-c ufo-c-clean clean
+
+all: $(SHLIB)
+$(SHLIB): $(OBJECTS) ufo-c
+
+ufo-c:
+	cargo $(CARGOFLAGS) --manifest-path=$(UFO_C_PATH)/Cargo.toml
+
+ufo-c-clean:
+	cargo clean --manifest-path=$(UFO_C_PATH)/Cargo.toml
+
+shlib-clean: ufo-c-clean
+	@-rm -rf .libs _libs
+	@-rm -f *.o $(SHLIB)
+
+init.o: init.c ufos.h ufo-c
+ufoTest.o: ufos.c ufos.h ufo-c

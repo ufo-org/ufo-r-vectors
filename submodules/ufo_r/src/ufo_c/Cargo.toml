@@ -1,0 +1,26 @@
+[package]
+name = "ufo_c"
+version = "0.1.0"
+authors = ["Colette 🌩︎‍💝 Kerr <Colette.m.y.Kerr@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.38"
+crossbeam = "0.8.0" 
+libc = "0.2.80"
+stderrlog = "0.5.1"
+ufo_core = { git = "https://github.com/ufo-org/ufo-core.git", branch = "main" }
+#ufo_core = { path = "../ufo-core/" }
+
+
+[lib]
+name = "ufo_c"
+crate-type = ["dylib", "staticlib"]
+
+[build-dependencies]
+cbindgen = "0.18.0"
+
+[profile.release]
+lto = true # better optimizations

@@ -7,8 +7,8 @@
 
 #include "debug.h"
 #include "helpers.h"
-#include "../include/ufo_r/src/bad_strings.h"
-#include "../include/ufo_r/src/ufos_writeback.h"
+#include "../include/bad_strings.h"
+#include "../include/ufos_writeback.h"
 
 #include <R.h>
 #define USE_RINTERNALS

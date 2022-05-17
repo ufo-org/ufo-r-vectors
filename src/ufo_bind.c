@@ -6,9 +6,9 @@
 
 #include "helpers.h"
 #include "debug.h"
-#include "ufo_coerce.h"
+#include "ufo_operators.h"
 
-#include "../include/ufo_r/src/ufos.h"
+#include "../include/ufos.h"
 
 typedef enum {
     BIND_NILSXP  = 0,
@@ -155,7 +155,7 @@ int32_t bind_iterate(void *user_data, uintptr_t start, uintptr_t end, unsigned c
 }
 
 
-int coerce_to_int_and_copy(SEXP source, R_xlen_t si, unsigned char* target, uintptr_t ti) {
+int coerce_to_int_and_copy(SEXP source, R_xlen_t si, unsigned char* target, uintptr_t ti) {   
     // Extra check to prevent Rf_error from firing within thje funcion
     switch (TYPEOF(source))	{
 	    case INTSXP:  ((int *) target)[ti] = INTEGER_ELT(source, si);                     return 0;
@@ -203,7 +203,7 @@ int coerce_to_complex_and_copy(SEXP source, R_xlen_t si, unsigned char* target, 
 int coerce_to_raw_and_copy(SEXP source, R_xlen_t si, unsigned char* target, uintptr_t ti) {
     // Extra check to prevent Rf_error from firing within thje funcion
     switch (TYPEOF(source))	{        
-	    case LGLSXP:  ((Rbyte *) target)[ti] = logical_as_raw(LOGICAL_ELT(source, si)); return 0;
+	    case LGLSXP:  ((Rbyte *) target)[ti] = (LOGICAL_ELT(source, si)); return 0;
 	    case RAWSXP:  ((Rbyte *) target)[ti] = RAW_ELT(source, si);                     return 0;
 	    default:
         UFO_REPORT("Cannot coerce values from vector of type %s to raw", type2char(TYPEOF(source)));

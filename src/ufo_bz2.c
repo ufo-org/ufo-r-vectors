@@ -14,7 +14,7 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "../include/ufo_r/src/ufos.h"
+#include "../include/ufos.h"
 #include "helpers.h"
 #include "debug.h"
 
