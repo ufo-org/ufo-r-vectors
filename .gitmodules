@@ -1,0 +1,6 @@
+[submodule "submodules/ufo_r"]
+	path = submodules/ufo_r
+	url = git@github.com:ufo-org/ufo-r.git
+[submodule "submodules/ufo_r_operators"]
+	path = submodules/ufo_r_operators
+	url = git@github.com:ufo-org/ufo-r-operators.git
