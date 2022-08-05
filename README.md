@@ -66,6 +66,18 @@ for privileged users. To allow unprivileged users to call `userfaultfd`:
 sysctl -w vm.unprivileged_userfaultfd=1
 ```
 
+Postgresql support: 
+
+```
+libpq-dev
+```
+
+SQLite support:
+
+```
+libsqlite3-dev
+```
+
 ## Building
 
 Before building, retrievew the code of a submodule:

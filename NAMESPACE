@@ -40,5 +40,7 @@ export(ufo_bind)
 export(ufo_psql)
 export(ufo_csv)
 
+export(ufo_sqlite_test)
+
 # Helpers
 export(ufo_store_bin)

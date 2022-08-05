@@ -9,7 +9,7 @@ endif
 
 #ifeq (${UFO_PSQL}, 1)
 PKG_CFLAGS += -I/usr/include/postgresql
-PKG_LIBS += -lpq
+PKG_LIBS += -lpq -lsqlite3
 #endif
 
 # TODO remove SAFETY_FIRST unless debug
@@ -22,6 +22,7 @@ SOURCES_C = init.c  \
             ufo_bz2.c bzip2/bitbuffer.c bzip2/bitstream.c bzip2/block.c bzip2/blocks.c bzip2/bz2_utils.c bzip2/shift.c \
             ufo_csv.c csv/string_vector.c csv/string_set.c csv/token.c csv/tokenizer.c csv/reader.c  \
             ufo_psql.c psql/psql.c \
+            ufo_sqlite.c sqlite/sqlite.c \
             ufo_vectors.c bin/io.c \
             evil/bad_strings.c \
             rrr.c helpers.c debug.c

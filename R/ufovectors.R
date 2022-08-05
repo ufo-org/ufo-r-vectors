@@ -366,6 +366,10 @@ ufo_psql <- function(db, table, column, read_only = FALSE, min_load_count = 0, a
              "ufo", add_class)
 }
 
+ufo_sqlite_test <- function() {
+  .Call(UFO_C_sqlite_test)
+}
+
 
 # ufo_integer_seq   <- function(from, to, by, read_only, min_load_count, ...)
 # ufo_numeric_seq   <- function(from, to, by, read_only, min_load_count, ...)
