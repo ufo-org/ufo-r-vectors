@@ -5,6 +5,7 @@
 #include "ufo_seq.h"
 #include "ufo_psql.h"
 #include "ufo_sqlite.h"
+#include "ufo_sqlite.h"
 #include "ufo_bz2.h"
 #include "ufo_write_protect.h"
 #include "ufo_bind.h"
@@ -65,6 +66,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"psql",        			(DL_FUNC) &ufo_psql,						5},
 
     // SQLite
+    {"sqlite_column",  			(DL_FUNC) &ufo_sqlite_column,   	 		5},
+
     {"sqlite_test",    			(DL_FUNC) &ufo_sqlite_test,  				0},
 
     // Storage.

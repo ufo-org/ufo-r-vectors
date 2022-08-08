@@ -38,6 +38,8 @@ export(ufo_write_protect)
 export(ufo_bind)
 
 export(ufo_psql)
+export(ufo_sqlite_column)
+#export(ufo_sqlite_table)
 export(ufo_csv)
 
 export(ufo_sqlite_test)

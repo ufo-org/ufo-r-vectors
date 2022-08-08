@@ -20,7 +20,9 @@
         "optional": "c",
         "limits": "c",
         "memory": "c",
-        "new": "c"
+        "new": "c",
+        "algorithm": "c",
+        "streambuf": "c"
     },
     "R.dir": "/opt/R-4.1.0",
     "R.cmd": "${config:R.dir}/bin/R" ,
