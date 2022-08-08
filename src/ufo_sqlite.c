@@ -71,9 +71,23 @@ int32_t sqlite_realsxp_populate(void* user_data, uintptr_t start, uintptr_t end,
     return sqlite_get_range(column_info->database, column_info->table, column_info->column, 0, column_info->row_count, &sqlite_get_range_real_callback, target);    
 }
 
+void sqlite_get_range_charsxp_callback(sqlite3_stmt *statement, void *data, size_t row) {
+    const char *string = (const char *) sqlite3_column_text(statement, 0); // Assume single column at this point.
+    
+    // FIXME play nice with GC
+    ((SEXP/*STRSXP*/ *) data)[row] = mkChar(string);
+}
+
+
 int32_t sqlite_strsxp_populate(void* user_data, uintptr_t start, uintptr_t end, unsigned char* target) {
     column_info_t *column_info = (column_info_t *) user_data;
-    return sqlite_get_range(column_info->database, column_info->table, column_info->column, 0, column_info->row_count, &sqlite_get_range_text_callback, target);    
+    return sqlite_get_range(column_info->database, column_info->table, column_info->column, 0, column_info->row_count, &sqlite_get_range_charsxp_callback, target);    
+}
+
+void ufo_sqlite_free(void *data) {
+    column_info_t *column_info = (column_info_t *) data;
+    // disconnect_from_database(psql->database);
+    column_info_free(column_info);
 }
 
 SEXP ufo_sqlite_column_constructor(const column_info_t *column_info, bool read_only, int32_t min_load_count) {
@@ -91,7 +105,7 @@ SEXP ufo_sqlite_column_constructor(const column_info_t *column_info, bool read_o
     
     source->data = (void *) column_info;
 
-    source->destructor_function = NULL;    
+    source->destructor_function = ufo_sqlite_free;
     source->writeback_function = NULL;
 
     switch (column_info->ufo_type) {
@@ -142,9 +156,9 @@ SEXP ufo_sqlite_column(SEXP/*STRSXP*/ db, SEXP/*STRSXP*/ table, SEXP/*STRSXP*/ c
     }  
 
     column_info_t *column_info = ufo_sqlite_column_select(columns, column_value);
-    ufo_sqlite_column_constructor(column_info, read_only_value, min_load_count_value);
+    SEXP sexp = ufo_sqlite_column_constructor(column_info, read_only_value, min_load_count_value);
 
     columns_info_free(columns);
 
-    return R_NilValue;
+    return sexp;
 }
