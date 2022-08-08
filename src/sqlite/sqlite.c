@@ -7,8 +7,6 @@
 
 #include "../safety_first.h"
 
-#include "Rinternals.h"
-
 #define MAX_QUERY_SIZE 1024
 #define MAX_IDENTIFIER_SIZE 64
 #define MAX_TABLE_COLUMNS 32
@@ -19,7 +17,7 @@ void sqlite_quote_identifier(const char *identifier, char *out) {
     sprintf(out, "`%s`", identifier);
 }
 
-columns_info_t *column_info_new(const char *database, const char *table, size_t column_count, size_t row_count) {
+columns_info_t *columns_info_new(const char *database, const char *table, size_t column_count, size_t row_count) {
     columns_info_t *columns = (columns_info_t *) malloc(sizeof(columns_info_t));
 
     columns->names = (char **) malloc(sizeof(char *) * column_count);
@@ -37,7 +35,7 @@ columns_info_t *column_info_new(const char *database, const char *table, size_t 
     return columns;
 }
 
-void column_info_free(columns_info_t *columns) {
+void columns_info_free(columns_info_t *columns) {
     for (size_t i = 0; i < columns->column_count; i++) {
         free(columns->names[i]);
     }
@@ -105,10 +103,8 @@ void handle_sqlite_error_with_message(sqlite3 *connection, const char *error_mes
     sqlite3_free((void *) error_message);
     sqlite3_close(connection);
     
-    Rf_error("Failed to execute query: %s\n", error_message);
+    fprintf(stderr, "Failed to execute query: %s\n", error_message);
 }
-
-//sqlite3_errmsg
 
 void handle_sqlite_error(sqlite3 *connection) {
     const char *error_message = sqlite3_errmsg(connection);
@@ -118,7 +114,7 @@ void handle_sqlite_error(sqlite3 *connection) {
     
     sqlite3_close(connection);
     
-    Rf_error("Failed to execute query: %s\n", error_message);
+    fprintf(stderr, "Failed to execute query: %s\n", error_message);
 }
 
 int sqlite_count_results_callback(void *user_data, int argc, char **argv, char **column_name) {
@@ -206,13 +202,13 @@ columns_info_t *columns_info_from_sqlite(const char *db, const char *table)  {
     if (result_code != SQLITE_OK) {
         const char *error_message = sqlite3_errmsg(connection);
         sqlite3_close(connection);
-        Rf_error("Can't open database: %s\n", error_message);   
+        fprintf(stderr, "Can't open database: %s\n", error_message);   
+        return NULL;
     }
 
     size_t column_count = columns_info_column_count_from_sqlite(connection, table);
     size_t row_count = columns_info_row_count_from_sqlite(connection, table);
-    printf("----> %ld\n", row_count);
-    columns_info_t *columns = column_info_new(db, table, column_count, row_count);
+    columns_info_t *columns = columns_info_new(db, table, column_count, row_count);
 
     char quoted_table[MAX_IDENTIFIER_SIZE];
     char query[MAX_QUERY_SIZE];
@@ -247,14 +243,15 @@ void sqlite_get_range_text_callback(sqlite3_stmt *statement, void *data, size_t 
     strcpy(((char **) data)[row], string);
 }
 
-void sqlite_get_range(const char *db, const char *table, const char *column, size_t start, size_t end, sqlite_get_range_callback callback, void *data) {
+int sqlite_get_range(const char *db, const char *table, const char *column, size_t start, size_t end, sqlite_get_range_callback callback, void *data) {
     sqlite3 *connection;
 
     int result_code = sqlite3_open(db, &connection);
     if (result_code != SQLITE_OK) {
         const char *error_message = sqlite3_errmsg(connection);
         sqlite3_close(connection);
-        Rf_error("Can't open database: %s\n", error_message);   
+        fprintf(stderr, "Can't open database: %s\n", error_message); \
+        return 1;  
     }
 
     char quoted_table[MAX_IDENTIFIER_SIZE];
@@ -276,6 +273,7 @@ void sqlite_get_range(const char *db, const char *table, const char *column, siz
 
     if (result_code != SQLITE_OK) {
         handle_sqlite_error(connection);
+        return 2;
     }
 
     for (size_t row = 0; ; row++) {    
@@ -286,9 +284,11 @@ void sqlite_get_range(const char *db, const char *table, const char *column, siz
         if (result_code != SQLITE_ROW) {
             result_code = sqlite3_finalize(statement);        
             handle_sqlite_error(connection);
-            break;
+            return 3;
         }       
-        make_sure(sqlite3_column_count(statement) == 1, "Expected the SQL query to return a single column, but found %ld", sqlite3_column_count(statement));
+        make_sure(sqlite3_column_count(statement) == 1, 
+                  "Expected the SQL query to return a single column, but found %ld", 
+                  sqlite3_column_count(statement));
         callback(statement, data, row);
     }
 
@@ -297,5 +297,8 @@ void sqlite_get_range(const char *db, const char *table, const char *column, siz
 
     if (result_code != SQLITE_OK) {
         handle_sqlite_error(connection);
+        return 4;
     }    
+
+    return 0;
 }

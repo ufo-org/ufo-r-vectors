@@ -68,8 +68,6 @@ static const R_CallMethodDef CallEntries[] = {
     // SQLite
     {"sqlite_column",  			(DL_FUNC) &ufo_sqlite_column,   	 		5},
 
-    {"sqlite_test",    			(DL_FUNC) &ufo_sqlite_test,  				0},
-
     // Storage.
     {"store_bin",				(DL_FUNC) &ufo_store_bin,					2},
 

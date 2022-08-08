@@ -22,8 +22,8 @@ typedef struct {
     sqlite_type_t *types;
 } columns_info_t;
 
-columns_info_t *column_info_new(const char *database, const char *table, size_t column_count, size_t row_count);
-void column_info_free(columns_info_t *columns);
+columns_info_t *columns_info_new(const char *database, const char *table, size_t column_count, size_t row_count);
+void columns_info_free(columns_info_t *columns);
 int columns_info_push(columns_info_t *columns, const char *name, const char *sql_type);
 bool columns_info_exists(const columns_info_t *columns, const char *name);
 int columns_info_type(const columns_info_t *columns, const char *name, ufo_vector_type_t *out);
@@ -35,4 +35,4 @@ void sqlite_get_range_int_callback(sqlite3_stmt *statement, void *data, size_t r
 void sqlite_get_range_real_callback(sqlite3_stmt *statement, void *data, size_t row);
 void sqlite_get_range_text_callback(sqlite3_stmt *statement, void *data, size_t row);
 
-void sqlite_get_range(const char *db, const char *table, const char *column, size_t start, size_t end, sqlite_get_range_callback callback, void *data);
+int sqlite_get_range(const char *db, const char *table, const char *column, size_t start, size_t end, sqlite_get_range_callback callback, void *data);

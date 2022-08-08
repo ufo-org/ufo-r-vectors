@@ -42,7 +42,7 @@ export(ufo_sqlite_column)
 #export(ufo_sqlite_table)
 export(ufo_csv)
 
-export(ufo_sqlite_test)
+# export(ufo_sqlite_test)
 
 # Helpers
 export(ufo_store_bin)
