@@ -366,19 +366,20 @@ ufo_psql <- function(db, table, column, read_only = FALSE, min_load_count = 0, a
              "ufo", add_class)
 }
 
-ufo_sqlite_column <- function(db, table, column, read_only = FALSE, min_load_count = 0, add_class = .check_add_class()) {
+ufo_sqlite_column <- function(db, table, column, writeback = FALSE, read_only = FALSE, min_load_count = 0, add_class = .check_add_class()) {
   .add_class(.Call(UFO_C_sqlite_column,
                     as.character(.expect_exactly_one(db)),
                     as.character(.expect_exactly_one(table)),
                     as.character(.expect_exactly_one(column)),
+                    as.logical(.expect_exactly_one(writeback)),
                     as.logical(.expect_exactly_one(read_only)),
                     as.integer(.expect_exactly_one(min_load_count))),
              "ufo", add_class)
 }
 
-# ufo_sqlite_test <- function() {
-#   .Call(UFO_C_sqlite_test)
-# }
+test <- function() {
+  .Call(UFO_C_test)
+}
 
 
 # ufo_integer_seq   <- function(from, to, by, read_only, min_load_count, ...)

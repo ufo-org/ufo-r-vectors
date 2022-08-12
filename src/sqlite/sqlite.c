@@ -302,3 +302,160 @@ int sqlite_get_range(const char *db, const char *table, const char *column, size
 
     return 0;
 }
+
+int sqlite_get_table_indices(sqlite3 *connection, const char *table, const char *column, size_t *result, size_t start, size_t end) {
+    char quoted_table[MAX_IDENTIFIER_SIZE];
+    char quoted_column[MAX_IDENTIFIER_SIZE];
+    char query[MAX_QUERY_SIZE];
+
+    sqlite_quote_identifier(table, quoted_table);   
+    sqlite_quote_identifier(column, quoted_column);   
+    sprintf(query, 
+        "SELECT __ufo_index, __table_index FROM ( "
+            "SELECT ROW_NUMBER() OVER(ORDER BY ROWID) __ufo_index, "
+                "ROWID as __table_index "
+            "FROM %s "
+        ") WHERE __ufo_index > %ld AND  __ufo_index <= %ld "
+           "ORDER BY __ufo_index ",
+        quoted_table, start, end
+    );
+
+    // char *error_message;
+    sqlite3_stmt *statement;
+    int result_code = sqlite3_prepare_v2(connection, query, strlen(query), &statement, NULL);
+
+    if (result_code != SQLITE_OK) {
+        handle_sqlite_error(connection);
+        return 2;
+    }
+
+    size_t row;
+    for (row = 0; ; row++) {    
+        result_code = sqlite3_step(statement);
+        if (result_code == SQLITE_DONE) {
+            break;
+        }
+        if (result_code != SQLITE_ROW) {
+            result_code = sqlite3_finalize(statement);        
+            handle_sqlite_error(connection);
+            return 3;
+        }       
+        make_sure(sqlite3_column_count(statement) == 2, 
+                  "Expected the SQL query to return a single column, but found %ld", 
+                  sqlite3_column_count(statement));
+
+                
+        size_t ufo_index = sqlite3_column_int64(statement, 0); 
+        size_t table_index = sqlite3_column_int64(statement, 1); 
+
+        printf(":: ufo_index: %ld table_index: %ld at [%ld]\n", ufo_index, table_index, ufo_index - start - 1);
+
+        result[ufo_index - start - 1] = table_index;
+    }
+    make_sure(row == (end - start),
+              "Expected the SQL query to return %ld rows, but it returned %ld", 
+              row, end - start);
+
+    result_code = sqlite3_finalize(statement);
+    // sqlite3_close(connection);
+
+    if (result_code != SQLITE_OK) {
+        handle_sqlite_error(connection);
+        return 4;
+    }    
+
+    return 0;
+}
+
+int sqlite_update_string(sqlite3 *connection, const char *table, const char *column, size_t index, const char *value) {
+    // TODO
+    return 0;
+}
+
+int sqlite_update_double(sqlite3 *connection, const char *table, const char *column, size_t index, double value) {
+    // TODO
+    return 0;
+}
+
+int sqlite_update_integer(sqlite3 *connection, const char *table, const char *column, size_t index, int value) {
+    
+    printf("~~ %s %s %ld, %d\n", table, column, index, value);
+
+    char quoted_table[MAX_IDENTIFIER_SIZE];
+    char quoted_column[MAX_IDENTIFIER_SIZE];
+    char query[MAX_QUERY_SIZE];
+
+    sqlite_quote_identifier(table, quoted_table);   
+    sqlite_quote_identifier(column, quoted_column);
+    sprintf(query, 
+        "UPDATE %s SET %s = \"%d\" WHERE ROWID == \"%ld\"", 
+        quoted_table, quoted_column, value, index
+    );
+
+    printf("QUERY: %s\n", query);
+
+    sqlite3_stmt *statement;
+    int result_code = sqlite3_prepare_v2(connection, query, strlen(query), &statement, NULL);
+
+    printf("EXECUTED: %d\n", result_code);
+    if (result_code != SQLITE_OK) {
+        handle_sqlite_error(connection);
+        return 2;
+    }
+    result_code = sqlite3_step(statement);
+
+    printf("STEP: %d\n", result_code);
+    if (result_code != SQLITE_DONE) {
+        result_code = sqlite3_finalize(statement);        
+        handle_sqlite_error(connection);
+        return 3;
+    }  
+
+    result_code = sqlite3_finalize(statement);   
+    printf("FINALIZE: %d\n", result_code);
+
+    if (result_code != SQLITE_OK) {
+        handle_sqlite_error(connection);
+    }
+
+    printf("DONE\n");
+
+    return 0;
+}
+
+int sqlite_update(const char *db, const char *table, const char *columne, size_t start, size_t end, const void *values, sqlite_update_function updater) {
+    sqlite3 *connection;
+
+    int result_code = sqlite3_open(db, &connection);
+    if (result_code != SQLITE_OK) {
+        const char *error_message = sqlite3_errmsg(connection);
+        sqlite3_close(connection);
+        fprintf(stderr, "Can't open database: %s\n", error_message); 
+        return 1;
+    }
+
+    size_t length = end - start;
+    size_t keys[length + 1];    
+
+    result_code = sqlite_get_table_indices(connection, "sharks", "length", keys, start, end);
+    if (result_code != 0) {
+        return result_code;
+    }
+
+    result_code = updater(connection, "sharks", "length", keys, values, length);
+
+    sqlite3_close(connection);
+    return result_code;
+}
+
+int sqlite_update_integers(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length) {
+    int *values = (int *) data;
+    for (size_t i = 0; i < length; i++) {
+        printf("[%ld] Updating %s[%ld] to %d\n", i, column, keys[i], values[i]);
+        int result = sqlite_update_integer(connection, table, column, keys[i], values[i]);
+        if (result != 0) {
+            return result;
+        }
+    }
+    return 0;
+}

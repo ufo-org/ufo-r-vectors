@@ -66,7 +66,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"psql",        			(DL_FUNC) &ufo_psql,						5},
 
     // SQLite
-    {"sqlite_column",  			(DL_FUNC) &ufo_sqlite_column,   	 		5},
+    {"sqlite_column",  			(DL_FUNC) &ufo_sqlite_column,   	 		6},
+
+    {"test",					(DL_FUNC) &test,  							0},
 
     // Storage.
     {"store_bin",				(DL_FUNC) &ufo_store_bin,					2},

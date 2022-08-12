@@ -36,3 +36,8 @@ void sqlite_get_range_real_callback(sqlite3_stmt *statement, void *data, size_t 
 void sqlite_get_range_text_callback(sqlite3_stmt *statement, void *data, size_t row);
 
 int sqlite_get_range(const char *db, const char *table, const char *column, size_t start, size_t end, sqlite_get_range_callback callback, void *data);
+
+typedef int (*sqlite_update_function)(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length);
+int sqlite_update(const char *db, const char *table, const char *columne, size_t start, size_t end, const void* values, sqlite_update_function updater);
+int sqlite_get_table_indices(sqlite3 *connection, const char *table, const char *column, size_t *result, size_t start, size_t end);
+int sqlite_update_integers(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length);

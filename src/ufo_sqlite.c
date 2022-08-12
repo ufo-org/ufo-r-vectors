@@ -2,6 +2,7 @@
 #include "sqlite/sqlite.h"
 #include "helpers.h"
 #include "safety_first.h"
+#include "../include/ufos_writeback.h"
 
 typedef struct {
     char *database;
@@ -90,7 +91,38 @@ void ufo_sqlite_free(void *data) {
     column_info_free(column_info);
 }
 
-SEXP ufo_sqlite_column_constructor(const column_info_t *column_info, bool read_only, int32_t min_load_count) {
+void sqlite_writeback(void *data, UfoWriteListenerEvent event) {
+    column_info_t *column_info = (column_info_t *) data;
+
+    sqlite_update_function updater = NULL;
+    switch (column_info->sqlite_type) {
+        case UFO_SQLITE_TEXT:
+            printf("todo: text\n");            
+            return;
+        case UFO_SQLITE_INTEGER:
+            updater = sqlite_update_integers;
+            break;
+        case UFO_SQLITE_FLOAT:
+            printf("todo: float\n");
+            return;
+        case UFO_SQLITE_BLOB:        
+            printf("Cannot write back to vector of type BLOB");
+            return;
+        case UFO_SQLITE_NULL: 
+            printf("Cannot write back to vector of type NULL");
+            return;
+    }
+
+    if (event.tag == Writeback) {
+        sqlite_update(
+            column_info->database, column_info->table, column_info->column, 
+            event.writeback.start_idx, event.writeback.end_idx, 
+            event.writeback.data, updater
+        );
+    }
+}
+
+SEXP ufo_sqlite_column_constructor(const column_info_t *column_info, bool writeback, bool read_only, int32_t min_load_count) {
     ufo_source_t* source = (ufo_source_t*) malloc(sizeof(ufo_source_t));
 
     source->vector_type = column_info->ufo_type;
@@ -106,7 +138,7 @@ SEXP ufo_sqlite_column_constructor(const column_info_t *column_info, bool read_o
     source->data = (void *) column_info;
 
     source->destructor_function = ufo_sqlite_free;
-    source->writeback_function = NULL;
+    source->writeback_function = writeback ? sqlite_writeback : NULL;
 
     switch (column_info->ufo_type) {
         case UFO_INT: 
@@ -136,9 +168,10 @@ column_info_t *ufo_sqlite_column_select(const columns_info_t *columns, const cha
     Rf_error("Column \"%s\" not found in table \"%s\" in database \"%s\"", column, columns->table, columns->database);
 }
 
-SEXP ufo_sqlite_column(SEXP/*STRSXP*/ db, SEXP/*STRSXP*/ table, SEXP/*STRSXP*/ column, SEXP/*LGLSXP*/ read_only, SEXP/*INTSXP*/ min_load_count) {
+SEXP ufo_sqlite_column(SEXP/*STRSXP*/ db, SEXP/*STRSXP*/ table, SEXP/*STRSXP*/ column, SEXP/*LGLSXP*/ writeback, SEXP/*LGLSXP*/ read_only, SEXP/*INTSXP*/ min_load_count) {
     // Read the arguements into practical types (with checks).
     bool read_only_value = __extract_boolean_or_die(read_only);
+    bool writeback_value = __extract_boolean_or_die(writeback);
     int min_load_count_value = __extract_int_or_die(min_load_count);
     const char *db_value = __extract_string_or_die(db);             // eg. "host=localhost port=5432 dbname=ufo user=ufo"
     const char *table_value = __extract_string_or_die(table);       // these should be sanitized
@@ -156,9 +189,17 @@ SEXP ufo_sqlite_column(SEXP/*STRSXP*/ db, SEXP/*STRSXP*/ table, SEXP/*STRSXP*/ c
     }  
 
     column_info_t *column_info = ufo_sqlite_column_select(columns, column_value);
-    SEXP sexp = ufo_sqlite_column_constructor(column_info, read_only_value, min_load_count_value);
+    SEXP sexp = ufo_sqlite_column_constructor(column_info, writeback_value, read_only_value, min_load_count_value);
 
     columns_info_free(columns);
 
     return sexp;
+}
+
+SEXP test() {
+
+    int values[3] = { 672, 674, 676 };
+    sqlite_update("test.db", "sharks", "length", 0, 3, values, sqlite_update_integers);
+
+    return R_NilValue;
 }
