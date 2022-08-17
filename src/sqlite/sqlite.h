@@ -41,3 +41,7 @@ typedef int (*sqlite_update_function)(sqlite3 *connection, const char *table, co
 int sqlite_update(const char *db, const char *table, const char *columne, size_t start, size_t end, const void* values, sqlite_update_function updater);
 int sqlite_get_table_indices(sqlite3 *connection, const char *table, const char *column, size_t *result, size_t start, size_t end);
 int sqlite_update_integers(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length);
+int sqlite_update_doubles(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length);
+int sqlite_update_string(sqlite3 *connection, const char *table, const char *column, size_t index, const char *value);
+int sqlite_update_double(sqlite3 *connection, const char *table, const char *column, size_t index, double value);
+int sqlite_update_integer(sqlite3 *connection, const char *table, const char *column, size_t index, int value);

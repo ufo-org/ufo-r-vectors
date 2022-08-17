@@ -91,29 +91,43 @@ void ufo_sqlite_free(void *data) {
     column_info_free(column_info);
 }
 
-void sqlite_writeback(void *data, UfoWriteListenerEvent event) {
-    column_info_t *column_info = (column_info_t *) data;
-
-    sqlite_update_function updater = NULL;
-    switch (column_info->sqlite_type) {
-        case UFO_SQLITE_TEXT:
-            printf("todo: text\n");            
-            return;
-        case UFO_SQLITE_INTEGER:
-            updater = sqlite_update_integers;
-            break;
-        case UFO_SQLITE_FLOAT:
-            printf("todo: float\n");
-            return;
-        case UFO_SQLITE_BLOB:        
-            printf("Cannot write back to vector of type BLOB");
-            return;
-        case UFO_SQLITE_NULL: 
-            printf("Cannot write back to vector of type NULL");
-            return;
+// This is here because it is extremely R specicfic
+int sqlite_update_from_charsxp_vec(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length) {
+    SEXP/*CHARSXP*/ *values = (SEXP *) data;
+    for (size_t i = 0; i < length; i++) {
+        const char *string = CHAR(values[i]);
+        fprintf(stderr, "[%ld] Updating %s[%ld] to %s\n", i, column, keys[i], string);
+        int result = sqlite_update_string(connection, table, column, keys[i], string);
+        if (result != 0) {
+            return result;
+        }
     }
+    return 0;
+}
 
+void sqlite_writeback(void *data, UfoWriteListenerEvent event) {
     if (event.tag == Writeback) {
+        column_info_t *column_info = (column_info_t *) data;
+
+        sqlite_update_function updater = NULL;
+        switch (column_info->sqlite_type) {
+            case UFO_SQLITE_TEXT:
+                updater = sqlite_update_from_charsxp_vec;          
+                break;
+            case UFO_SQLITE_INTEGER:
+                updater = sqlite_update_integers;
+                break;
+            case UFO_SQLITE_FLOAT:
+                updater = sqlite_update_doubles;
+                break;
+            case UFO_SQLITE_BLOB:        
+                printf("Cannot write back to vector of type BLOB");
+                return;
+            case UFO_SQLITE_NULL: 
+                printf("Cannot write back to vector of type NULL");
+                return;
+        }
+
         sqlite_update(
             column_info->database, column_info->table, column_info->column, 
             event.writeback.start_idx, event.writeback.end_idx, 
@@ -139,6 +153,7 @@ SEXP ufo_sqlite_column_constructor(const column_info_t *column_info, bool writeb
 
     source->destructor_function = ufo_sqlite_free;
     source->writeback_function = writeback ? sqlite_writeback : NULL;
+    fprintf(stderr, "WRITEBACK: %d %p\n", writeback, source->writeback_function);
 
     switch (column_info->ufo_type) {
         case UFO_INT: 

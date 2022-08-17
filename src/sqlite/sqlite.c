@@ -348,7 +348,7 @@ int sqlite_get_table_indices(sqlite3 *connection, const char *table, const char 
         size_t ufo_index = sqlite3_column_int64(statement, 0); 
         size_t table_index = sqlite3_column_int64(statement, 1); 
 
-        printf(":: ufo_index: %ld table_index: %ld at [%ld]\n", ufo_index, table_index, ufo_index - start - 1);
+        fprintf(stderr, ":: ufo_index: %ld table_index: %ld at [%ld]\n", ufo_index, table_index, ufo_index - start - 1);
 
         result[ufo_index - start - 1] = table_index;
     }
@@ -367,20 +367,61 @@ int sqlite_get_table_indices(sqlite3 *connection, const char *table, const char 
     return 0;
 }
 
-int sqlite_update_string(sqlite3 *connection, const char *table, const char *column, size_t index, const char *value) {
-    // TODO
+int sqlite_update_via_statement(sqlite3 *connection, const char *query) {    
+    sqlite3_stmt *statement;
+    int result_code = sqlite3_prepare_v2(connection, query, strlen(query), &statement, NULL);
+
+    if (result_code != SQLITE_OK) {
+        handle_sqlite_error(connection);
+        return 2;
+    }
+    result_code = sqlite3_step(statement);
+
+    if (result_code != SQLITE_DONE) {
+        result_code = sqlite3_finalize(statement);        
+        handle_sqlite_error(connection);
+        return 3;
+    }  
+
+    result_code = sqlite3_finalize(statement);
+    if (result_code != SQLITE_OK) {
+        handle_sqlite_error(connection);
+    }
+
     return 0;
+}
+
+int sqlite_update_string(sqlite3 *connection, const char *table, const char *column, size_t index, const char *value) {
+    char quoted_table[MAX_IDENTIFIER_SIZE];
+    char quoted_column[MAX_IDENTIFIER_SIZE];
+    char query[MAX_QUERY_SIZE];
+
+    sqlite_quote_identifier(table, quoted_table);   
+    sqlite_quote_identifier(column, quoted_column);
+    sprintf(query, 
+        "UPDATE %s SET %s = \"%s\" WHERE ROWID == \"%ld\"", 
+        quoted_table, quoted_column, value, index
+    );
+
+    return sqlite_update_via_statement(connection, query);
 }
 
 int sqlite_update_double(sqlite3 *connection, const char *table, const char *column, size_t index, double value) {
-    // TODO
-    return 0;
+    char quoted_table[MAX_IDENTIFIER_SIZE];
+    char quoted_column[MAX_IDENTIFIER_SIZE];
+    char query[MAX_QUERY_SIZE];
+
+    sqlite_quote_identifier(table, quoted_table);   
+    sqlite_quote_identifier(column, quoted_column);
+    sprintf(query, 
+        "UPDATE %s SET %s = \"%f\" WHERE ROWID == \"%ld\"", 
+        quoted_table, quoted_column, value, index
+    );
+
+    return sqlite_update_via_statement(connection, query);
 }
 
-int sqlite_update_integer(sqlite3 *connection, const char *table, const char *column, size_t index, int value) {
-    
-    printf("~~ %s %s %ld, %d\n", table, column, index, value);
-
+int sqlite_update_integer(sqlite3 *connection, const char *table, const char *column, size_t index, int value) {    
     char quoted_table[MAX_IDENTIFIER_SIZE];
     char quoted_column[MAX_IDENTIFIER_SIZE];
     char query[MAX_QUERY_SIZE];
@@ -392,38 +433,10 @@ int sqlite_update_integer(sqlite3 *connection, const char *table, const char *co
         quoted_table, quoted_column, value, index
     );
 
-    printf("QUERY: %s\n", query);
-
-    sqlite3_stmt *statement;
-    int result_code = sqlite3_prepare_v2(connection, query, strlen(query), &statement, NULL);
-
-    printf("EXECUTED: %d\n", result_code);
-    if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
-        return 2;
-    }
-    result_code = sqlite3_step(statement);
-
-    printf("STEP: %d\n", result_code);
-    if (result_code != SQLITE_DONE) {
-        result_code = sqlite3_finalize(statement);        
-        handle_sqlite_error(connection);
-        return 3;
-    }  
-
-    result_code = sqlite3_finalize(statement);   
-    printf("FINALIZE: %d\n", result_code);
-
-    if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
-    }
-
-    printf("DONE\n");
-
-    return 0;
+    return sqlite_update_via_statement(connection, query);
 }
 
-int sqlite_update(const char *db, const char *table, const char *columne, size_t start, size_t end, const void *values, sqlite_update_function updater) {
+int sqlite_update(const char *db, const char *table, const char *column, size_t start, size_t end, const void *values, sqlite_update_function updater) {
     sqlite3 *connection;
 
     int result_code = sqlite3_open(db, &connection);
@@ -437,12 +450,12 @@ int sqlite_update(const char *db, const char *table, const char *columne, size_t
     size_t length = end - start;
     size_t keys[length + 1];    
 
-    result_code = sqlite_get_table_indices(connection, "sharks", "length", keys, start, end);
+    result_code = sqlite_get_table_indices(connection, table, column, keys, start, end);
     if (result_code != 0) {
         return result_code;
     }
 
-    result_code = updater(connection, "sharks", "length", keys, values, length);
+    result_code = updater(connection, table, column, keys, values, length);
 
     sqlite3_close(connection);
     return result_code;
@@ -451,8 +464,20 @@ int sqlite_update(const char *db, const char *table, const char *columne, size_t
 int sqlite_update_integers(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length) {
     int *values = (int *) data;
     for (size_t i = 0; i < length; i++) {
-        printf("[%ld] Updating %s[%ld] to %d\n", i, column, keys[i], values[i]);
+        fprintf(stderr, "[%ld] Updating %s[%ld] to %d\n", i, column, keys[i], values[i]);
         int result = sqlite_update_integer(connection, table, column, keys[i], values[i]);
+        if (result != 0) {
+            return result;
+        }
+    }
+    return 0;
+}
+
+int sqlite_update_doubles(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length) {
+    double *values = (double *) data;
+    for (size_t i = 0; i < length; i++) {
+        fprintf(stderr, "[%ld] Updating %s[%ld] to %f\n", i, column, keys[i], values[i]);
+        int result = sqlite_update_double(connection, table, column, keys[i], values[i]);
         if (result != 0) {
             return result;
         }
