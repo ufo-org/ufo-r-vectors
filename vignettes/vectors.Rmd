@@ -115,11 +115,9 @@ This will work, but R will create `v` as an ordinary vector, not a UFO. This mea
 
 ### Class
 
-To prevent this, they provide a set of operators that return file-backed UFOs.
-These operator implementations are a separate, optional feature of UFO vectors, so they need to be turned on before loading the package:
+To prevent this, they provide a set of operators that return file-backed UFOs. These 
 
 ```{r}
-options(ufos.add_class = TRUE)
 library(ufooperators)
 iv <- ufo_integer_bin("example_int.bin")
 ```
