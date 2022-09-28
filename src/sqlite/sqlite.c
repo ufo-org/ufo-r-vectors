@@ -50,7 +50,7 @@ int columns_info_push(columns_info_t *columns, const char *name, const char *sql
     make_sure(columns->column_count >= 0 && columns->column_count < columns->capacity, 
              "Index out of bounds 0 >= %ld < %ld.", columns->column_count, columns->capacity);
     
-    columns->names[columns->column_count] = (char *) malloc(sizeof(char) * strlen(name));
+    columns->names[columns->column_count] = (char *) malloc(sizeof(char) * (strlen(name) + 1));
     if (columns->names[columns->column_count] == NULL) {
         return 1;
     }
@@ -63,12 +63,12 @@ int columns_info_push(columns_info_t *columns, const char *name, const char *sql
         columns->types[columns->column_count] = UFO_SQLITE_TEXT;
     } else if (0 == strcmp(sql_type, "BLOB")) {
         columns->types[columns->column_count] = UFO_SQLITE_BLOB;
-    } else if (0 == strcmp(sql_type, "FLOAT")) {
+    } else if (0 == strcmp(sql_type, "FLOAT") || 0 == strcmp(sql_type, "REAL")) {
         columns->types[columns->column_count] = UFO_SQLITE_FLOAT;
     } else if (0 == strcmp(sql_type, "NULL")) {
         columns->types[columns->column_count] = UFO_SQLITE_NULL;
     } else {
-        //Rf_error("Cannot parse column info for %s: unknown sql column type %s", name, sql_type);
+        fprintf(stderr, "Cannot parse column info for %s: unknown sql column type %s", name, sql_type);
         return 3;
     }
 
@@ -95,18 +95,19 @@ int columns_info_type(const columns_info_t *columns, const char *name, ufo_vecto
     return 1;
 }
 
-void handle_sqlite_error_with_message(sqlite3 *connection, const char *error_message) {
+void handle_sqlite_error_with_message(sqlite3 *connection, const char *query, const char *error_message) {
     size_t message_length = strlen(error_message);
     char private_error_message[message_length + 1];
     strcpy(private_error_message, error_message);
+
+    fprintf(stderr, "Failed to execute query: %s\n%s\n", private_error_message, query);    
     
     sqlite3_free((void *) error_message);
     sqlite3_close(connection);
-    
-    fprintf(stderr, "Failed to execute query: %s\n", error_message);
+
 }
 
-void handle_sqlite_error(sqlite3 *connection) {
+void handle_sqlite_error(sqlite3 *connection, const char *query) {
     const char *error_message = sqlite3_errmsg(connection);
     size_t message_length = strlen(error_message);
     char private_error_message[message_length + 1];
@@ -114,12 +115,14 @@ void handle_sqlite_error(sqlite3 *connection) {
     
     sqlite3_close(connection);
     
-    fprintf(stderr, "Failed to execute query: %s\n", error_message);
+    fprintf(stderr, "Failed to execute query: %s\n%s\n", private_error_message, query);
 }
 
 int sqlite_count_results_callback(void *user_data, int argc, char **argv, char **column_name) {
     size_t *n = (size_t *) user_data; 
+    printf("sqlite_count_results_callback (1): %ld",*n);    
     (*n) += 1;
+    printf("sqlite_count_results_callback (2): %ld",*n);    
     return 0;
 }
 
@@ -134,7 +137,7 @@ size_t columns_info_column_count_from_sqlite(sqlite3 *connection, const char *ta
     char *error_message;
     int result_code = sqlite3_exec(connection, query, &sqlite_count_results_callback, &columns, &error_message);
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error_with_message(connection, error_message);
+        handle_sqlite_error_with_message(connection, query, error_message);
     }
 
     return columns;
@@ -151,20 +154,20 @@ size_t columns_info_row_count_from_sqlite(sqlite3 *connection, const char *table
     int result_code = sqlite3_prepare_v2(connection, query, strlen(query), &statement, NULL);
 
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
     }
 
     result_code = sqlite3_step(statement);
     
     if (result_code != SQLITE_ROW) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
     }
 
     size_t rows = sqlite3_column_int64(statement, 0);
 
     result_code = sqlite3_finalize(statement);
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
     }
 
     return rows;
@@ -180,6 +183,7 @@ int columns_info_from_sqlite_callback(void *user_data, int argc, char **argv, ch
     char *sql_type = NULL;
 
     for (int i = 0; i < argc; i++) {
+        printf("xxx %i %s=%s\n", i, column_name[i], argv[i]);
         if (0 == strcmp(column_name[i], "name")) {
             name = argv[i];
             found_name = true;
@@ -191,7 +195,9 @@ int columns_info_from_sqlite_callback(void *user_data, int argc, char **argv, ch
     }
 
     if (!found_name || !found_type) return 1;  
-    return columns_info_push(columns, name, sql_type);
+    int result = columns_info_push(columns, name, sql_type);
+    printf("xxx ===%i\n", result);
+    return result;
 }
 
 
@@ -214,12 +220,13 @@ columns_info_t *columns_info_from_sqlite(const char *db, const char *table)  {
     char query[MAX_QUERY_SIZE];
 
     sqlite_quote_identifier(table, quoted_table);   
+    printf("HERE?\n");
     sprintf(query, "PRAGMA table_info(%s)", quoted_table);
 
     char *error_message;
     result_code = sqlite3_exec(connection, query, &columns_info_from_sqlite_callback, columns, &error_message);
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error_with_message(connection, error_message);
+        handle_sqlite_error_with_message(connection, query, error_message);
     }
 
     sqlite3_close(connection);
@@ -272,7 +279,7 @@ int sqlite_get_range(const char *db, const char *table, const char *column, size
     result_code = sqlite3_prepare_v2(connection, query, strlen(query), &statement, NULL);
 
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
         return 2;
     }
 
@@ -283,7 +290,7 @@ int sqlite_get_range(const char *db, const char *table, const char *column, size
         }
         if (result_code != SQLITE_ROW) {
             result_code = sqlite3_finalize(statement);        
-            handle_sqlite_error(connection);
+            handle_sqlite_error(connection, query);
             return 3;
         }       
         make_sure(sqlite3_column_count(statement) == 1, 
@@ -296,7 +303,7 @@ int sqlite_get_range(const char *db, const char *table, const char *column, size
     sqlite3_close(connection);
 
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
         return 4;
     }    
 
@@ -325,7 +332,7 @@ int sqlite_get_table_indices(sqlite3 *connection, const char *table, const char 
     int result_code = sqlite3_prepare_v2(connection, query, strlen(query), &statement, NULL);
 
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
         return 2;
     }
 
@@ -337,7 +344,7 @@ int sqlite_get_table_indices(sqlite3 *connection, const char *table, const char 
         }
         if (result_code != SQLITE_ROW) {
             result_code = sqlite3_finalize(statement);        
-            handle_sqlite_error(connection);
+            handle_sqlite_error(connection, query);
             return 3;
         }       
         make_sure(sqlite3_column_count(statement) == 2, 
@@ -360,7 +367,7 @@ int sqlite_get_table_indices(sqlite3 *connection, const char *table, const char 
     // sqlite3_close(connection);
 
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
         return 4;
     }    
 
@@ -372,20 +379,20 @@ int sqlite_update_via_statement(sqlite3 *connection, const char *query) {
     int result_code = sqlite3_prepare_v2(connection, query, strlen(query), &statement, NULL);
 
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
         return 2;
     }
     result_code = sqlite3_step(statement);
 
     if (result_code != SQLITE_DONE) {
         result_code = sqlite3_finalize(statement);        
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
         return 3;
     }  
 
     result_code = sqlite3_finalize(statement);
     if (result_code != SQLITE_OK) {
-        handle_sqlite_error(connection);
+        handle_sqlite_error(connection, query);
     }
 
     return 0;
@@ -464,7 +471,7 @@ int sqlite_update(const char *db, const char *table, const char *column, size_t 
 int sqlite_update_integers(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length) {
     int *values = (int *) data;
     for (size_t i = 0; i < length; i++) {
-        fprintf(stderr, "[%ld] Updating %s[%ld] to %d\n", i, column, keys[i], values[i]);
+        fprintf(stderr, "[%ld] Updating 1 %s[%ld] to %d\n", i, column, keys[i], values[i]);
         int result = sqlite_update_integer(connection, table, column, keys[i], values[i]);
         if (result != 0) {
             return result;
@@ -476,7 +483,7 @@ int sqlite_update_integers(sqlite3 *connection, const char *table, const char *c
 int sqlite_update_doubles(sqlite3 *connection, const char *table, const char *column, const size_t *keys, const void *data, size_t length) {
     double *values = (double *) data;
     for (size_t i = 0; i < length; i++) {
-        fprintf(stderr, "[%ld] Updating %s[%ld] to %f\n", i, column, keys[i], values[i]);
+        fprintf(stderr, "[%ld] Updating 2 %s[%ld] to %f\n", i, column, keys[i], values[i]);
         int result = sqlite_update_double(connection, table, column, keys[i], values[i]);
         if (result != 0) {
             return result;

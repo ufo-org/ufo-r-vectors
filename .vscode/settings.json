@@ -22,7 +22,10 @@
         "memory": "c",
         "new": "c",
         "algorithm": "c",
-        "streambuf": "c"
+        "streambuf": "c",
+        "random": "c",
+        "*.tcc": "c",
+        "string_view": "c"
     },
     "R.dir": "/opt/R-4.1.0",
     "R.cmd": "${config:R.dir}/bin/R" ,

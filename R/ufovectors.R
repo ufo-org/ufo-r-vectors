@@ -189,9 +189,44 @@ ufo_matrix_bin <- function(type, path, rows, cols, read_only = FALSE, min_load_c
   stop(paste0("Unknown UFO matrix type: ", type))
 }
 
+ufo_character_mmap <- function(paths, offset, extent, writeback = FALSE, fill = " ", min_load_count = 0, add_class) {
+    open_indexed_files <- function(paths, offset, extent) {
+        if (all(extent == 0)) 
+            return(character(0))
+
+        if (length(offset) != length(extent)) 
+            stop("length of 'offset' [", length(offset), "] ",
+                "must equal length of 'extent' [",
+                length(extent), "]")
+
+        paths <- normalizePath(paths, mustWork = FALSE)
+        if (!all(file.exists(paths))) {
+            # data <- rep(list(" "), length(extent))e
+            # filemode <- force(filemode)
+            result <- file.create(paths)
+            if (!all(result))
+                stop("error creating file(s)")
+        }
+    }
+    open_indexed_files(paths, offset, extent)
+
+    if (length(paths) != length(extent) && length(paths) != 1)
+        stop("Paths can be of the same length as extent (",
+             extent, ") or of length 1, but it is: ", length(paths))
+
+    maybe_add_class(.Call("strsxp_mmap",
+              as.character(paths),
+              offset,
+              extent,              
+              as.character(.expect_exactly_one(fill)),
+              !as.logical(.expect_exactly_one(writeback)),
+              as.integer(.expect_exactly_one(min_load_count))),
+      add_class)
+}
+
 ufo_csv <- function(path, read_only = FALSE, min_load_count = 0, check_names=T, header=T, 
                     record_row_offsets_at_interval=1000, initial_buffer_size=32, col_names, 
-                    add_class) {
+                    add_class=T) {
 
   .expect_exactly_one(min_load_count)
   .expect_exactly_one(header)
@@ -213,7 +248,7 @@ ufo_csv <- function(path, read_only = FALSE, min_load_count = 0, check_names=T, 
     names(df) <- col_names
   }
   else if (!header && missing(col_names)) {
-    names(df) <- sapply(1:length(df), function(i) paste0("V", i))
+    names(df) <- sapply(seq_len(df), function(i) paste0("V", i))
   }
   if(check_names) {
     names(df) <- make.names(names(df), unique=T)

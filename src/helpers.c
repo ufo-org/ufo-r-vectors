@@ -69,6 +69,36 @@ R_xlen_t __extract_R_xlen_t_or_die(SEXP/*REALSXP|INTSXP*/ sexp) {
 }
 
 
+R_xlen_t *__extract_R_xlen_t_array_or_die(SEXP/*REALSXP|INTSXP*/ sexp) {
+	if (TYPEOF(sexp) != REALSXP &&  TYPEOF(sexp) != INTSXP) {
+        Rf_error("Invalid type for R_xlen_t vector: %s\n", type2char(TYPEOF(sexp)));
+    }
+
+    if (sizeof(R_xlen_t) != sizeof(double)) {
+        Rf_warning("Expecting double and int64_t to be same size, but they are %li and %li, respectively",
+        		   sizeof(int64_t), sizeof(double));
+    }
+
+    R_xlen_t length = XLENGTH(sexp);
+    R_xlen_t *result = (R_xlen_t *) malloc(sizeof(int64_t) * length);
+
+    if (TYPEOF(sexp) == REALSXP) {
+        for (R_xlen_t i = 0; i < length; i++) {
+            R_xlen_t value = (R_xlen_t) REAL_ELT(sexp, i);
+            if (value > SIZE_MAX) {
+        	    Rf_error("Cannot convert REALSXP to R_xlen_t, value %li is larger than SIZE_MAX=%li", value, SIZE_MAX);
+            }
+            result[i] = value;
+        }
+    } else {
+        for (R_xlen_t i = 0; i < length; i++) {
+            result[i] = (R_xlen_t) INTEGER_ELT(sexp, i);
+        }
+    }   
+
+    return (R_xlen_t *) result;
+}
+
 /**
  * Check if the path provided via this SEXP makes sense:
  *  - it contains strings,
@@ -104,8 +134,33 @@ const char* __extract_path_or_die(SEXP/*STRSXP*/ path) {
 
     // Copy string and return the copy.
     const char *tmp = CHAR(STRING_ELT(path, 0));
-    char *ret = (char *) malloc(sizeof(char) * strlen(tmp));  // FIXME reclaim
+    char *ret = (char *) malloc(sizeof(char) * (strlen(tmp) + 1));  // FIXME reclaim
     strcpy(ret, tmp);
+    ret[strlen(tmp)] = '\0';
+    return ret;
+}
+
+const char **__extract_path_array_or_die(SEXP/*STRSXP*/ paths) {
+    if (TYPEOF(paths) != STRSXP) {
+        Rf_error("Invalid type for paths: %s\n", type2char(TYPEOF(paths)));
+    }
+
+    if (TYPEOF(STRING_ELT(paths, 0)) != CHARSXP) {
+        Rf_error("Invalid type for path: %s\n", type2char(TYPEOF(STRING_ELT(paths, 0))));
+    }
+
+    R_xlen_t length = XLENGTH(paths);
+    const char **ret = (const char **) malloc(sizeof(char *) * length);
+
+    for (R_xlen_t i = 0; i < length; i++) {
+        SEXP/*CHARSXP*/ tmp = STRING_ELT(paths, i);
+        R_xlen_t tmp_length = XLENGTH(tmp);
+        char *string = (char *) malloc(sizeof(char) * (tmp_length + 1));
+        strncpy(string, CHAR(tmp), tmp_length);
+        string[tmp_length] = '\0';
+        ret[i] = (const char *) string;
+    }    
+
     return ret;
 }
 
@@ -122,7 +177,7 @@ const char* __extract_string_or_die(SEXP/*STRSXP*/ string) {
         Rf_error("Invalid type for string vector: %s\n", type2char(TYPEOF(STRING_ELT(string, 0))));
     }
 
-    if (LENGTH(string) > 2) {
+    if (LENGTH(string) > 1) {
         Rf_warning("Provided multiple string values, "
                            "using the first one only\n");
     }
@@ -132,6 +187,40 @@ const char* __extract_string_or_die(SEXP/*STRSXP*/ string) {
     char *ret = (char *) malloc(sizeof(char) * strlen(tmp));  // FIXME reclaim
     strcpy(ret, tmp);
     return ret;
+}
+
+char __extract_char_or_die(SEXP/*STRSXP*/ string) {
+    if (TYPEOF(string) != STRSXP) {
+        Rf_error("Invalid type for string vector: %s\n", type2char(TYPEOF(string)));
+    }
+
+    if (LENGTH(string) == 0) {
+        Rf_error("Provided a zero length string vector\n");
+    }
+
+    if (TYPEOF(STRING_ELT(string, 0)) != CHARSXP) {
+        Rf_error("Invalid type for string vector: %s\n", type2char(TYPEOF(STRING_ELT(string, 0))));
+    }
+
+    if (LENGTH(string) > 1) {
+        Rf_warning("Provided multiple string values, "
+                           "using the first one only\n");
+    }
+
+    // Copy string and return the copy.
+    SEXP /*CHARSXP*/ tmp = STRING_ELT(string, 0);
+
+    if (LENGTH(tmp) == 0) {
+        Rf_error("Provided an empty string, "
+                 "cannot extract a character from it\n");
+    }
+
+    if (LENGTH(tmp) > 1) {
+        Rf_error("Provided a string of length > 1, "
+                   "but expecting a single character");
+    }
+
+    return CHAR(tmp)[0];
 }
 
 int32_t __select_min_load_count(int32_t min_load_count, size_t element_size) {

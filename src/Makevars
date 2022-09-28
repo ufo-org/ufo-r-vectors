@@ -25,6 +25,7 @@ SOURCES_C = init.c  \
             ufo_sqlite.c sqlite/sqlite.c \
             ufo_vectors.c bin/io.c \
             evil/bad_strings.c \
+            ufo_mmap.c \
             rrr.c helpers.c debug.c
 
 OBJECTS = $(SOURCES_C:.c=.o)

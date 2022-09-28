@@ -96,7 +96,7 @@ int sqlite_update_from_charsxp_vec(sqlite3 *connection, const char *table, const
     SEXP/*CHARSXP*/ *values = (SEXP *) data;
     for (size_t i = 0; i < length; i++) {
         const char *string = CHAR(values[i]);
-        fprintf(stderr, "[%ld] Updating %s[%ld] to %s\n", i, column, keys[i], string);
+        fprintf(stderr, "[%ld] Updating 3 %s[%ld] to '%s'\n", i, column, keys[i], string);
         int result = sqlite_update_string(connection, table, column, keys[i], string);
         if (result != 0) {
             return result;
@@ -106,6 +106,9 @@ int sqlite_update_from_charsxp_vec(sqlite3 *connection, const char *table, const
 }
 
 void sqlite_writeback(void *data, UfoWriteListenerEvent event) {
+
+    printf("WRITEBACK EVENT %i\n", event.tag);
+
     if (event.tag == Writeback) {
         column_info_t *column_info = (column_info_t *) data;
 

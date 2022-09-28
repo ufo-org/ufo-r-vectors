@@ -37,10 +37,24 @@ SEXP/*CHARSXP*/ mkBadChar(const char* contents) {
     return bad_string;
 }
 
+SEXP/*CHARSXP*/ mkBadCharN(const char* contents, R_len_t size) {
+    if (0 == strcmp(contents, ""))       return R_BlankString;
+    if (0 == strcmp(contents, "NA"))     return NA_STRING;
+    //if (0 == strcmp(contents, "base"))   return R_BaseNamespaceName;
+
+    SEXP/*CHARSXP*/ bad_string;
+
+    PROTECT(bad_string = allocVector(intCHARSXP, size));
+    memcpy(CHAR_RW(bad_string), contents, size);
+    SET_ASCII(bad_string);                                  // FIXME
+    UNPROTECT(1);
+    return bad_string;
+}
+
 SEXP/*STRSXP*/ mkBadString(const char* contents) {
     SEXP bad_string_vector;
     SEXP bad_string;
-
+    
     PROTECT(bad_string_vector = allocVector(STRSXP, 1));
     PROTECT(bad_string = mkBadChar(contents));
     SET_STRING_ELT(bad_string_vector, 0, bad_string);

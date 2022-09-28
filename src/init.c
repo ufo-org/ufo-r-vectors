@@ -9,6 +9,7 @@
 #include "ufo_bz2.h"
 #include "ufo_write_protect.h"
 #include "ufo_bind.h"
+#include "ufo_mmap.h"
 
 #include <R_ext/Rdynload.h>
 #include <R_ext/Visibility.h>
@@ -30,6 +31,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"matrix_cplxsxp_bin",      (DL_FUNC) &ufo_matrix_cplxsxp_bin,          5},
     {"matrix_lglsxp_bin",       (DL_FUNC) &ufo_matrix_lglsxp_bin,           5},
     {"matrix_rawsxp_bin",       (DL_FUNC) &ufo_matrix_rawsxp_bin,           5},
+
+    // Selective mmap based on offsets and lengths.
+    {"strsxp_mmap",             (DL_FUNC) &ufo_strsxp_mmap,                 6},
 
 	// Constructors for empty vectors.
 	{"intsxp_empty",			(DL_FUNC) &ufo_intsxp_empty,				3},
